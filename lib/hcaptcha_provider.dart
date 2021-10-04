@@ -21,7 +21,8 @@ class CaptchaDataContainer {
   bool hasData({required String key}) => data.containsKey(key);
 }
 
-typedef CaptchaCompleteFunction = Function(String result, CaptchaBloc bloc);
+typedef CaptchaCompleteFunction = Function(
+    String result, CaptchaBloc bloc, CaptchaDataContainer cdc);
 
 class _CaptchaBuilder extends StatelessWidget {
   final Widget onCaptcha;
@@ -37,7 +38,9 @@ class _CaptchaBuilder extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocListener<CaptchaBloc, CaptchaState>(
       listener: (context, state) {
-        if (state is CaptchaSubmitted) onCaptchaCompleted(state.result, context.read<CaptchaBloc>());
+        if (state is CaptchaSubmitted)
+          onCaptchaCompleted(state.result, context.read<CaptchaBloc>(),
+              context.read<CaptchaDataContainer>());
       },
       child: BlocBuilder<CaptchaBloc, CaptchaState>(
         builder: (context, state) {
