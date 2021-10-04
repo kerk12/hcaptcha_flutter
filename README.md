@@ -2,8 +2,12 @@
 
 During one of the projects I was working on, I found out that there aren't any "solid enough" captcha implementations in Flutter.
 
-After following [https://medium.com/@hCaptcha/implementing-hcaptcha-in-your-flutter-app-13ea6ddca71b](this official guide) on [https://www.hcaptcha.com/](hCaptcha), I decided to make an
-"all-in-one" solution, that takes care of the state and widgets.
+After following [https://medium.com/@hCaptcha/implementing-hcaptcha-in-your-flutter-app-13ea6ddca71b](this official guide) 
+on [https://www.hcaptcha.com/](hCaptcha), I decided to make an "all-in-one" solution, that takes care
+ of the state and widgets needed to get HCaptcha Working with your flutter project.
+ 
+This Repository is part of the **Hacktoberfest 2021** challenge! If it seems kind of empty, it's because it's intentionally left this way.
+Take a look at the issues tab for stuff that needs doing, and earn yourself a free T-Shirt along the way! 
 
 ## Features:
 
@@ -12,9 +16,11 @@ After following [https://medium.com/@hCaptcha/implementing-hcaptcha-in-your-flut
 
 ## Captcha HTML Page creation:
 
-For this package to work, we assume that the app you're developing client-server based, meaning that there's a backend to support it.
+For this package to work, we assume that the app you're developing client-server based, meaning that
+there's a backend to support it.
 
-Before you take care of the package installation and implementation, you'll need to add a simple HTML page to your server:
+Before you take care of the package installation and implementation, you'll need to add a simple HTML
+page to your server (Don't forget to add your secret key!!!):
 
 ```html
 <!DOCTYPE html>
@@ -43,7 +49,12 @@ Before you take care of the package installation and implementation, you'll need
 </html>
 ```
 
-This page takes care of serving your Captcha to your mobile device. In this case, we'll assume that the URL pointing to this page is `myapp.kgiannakis.me/captcha-challenge`.
+This page takes care of serving your Captcha to your mobile device. The `Captcha` thing inside the 
+`<script>` is where the magic happens. This is a [JavaScript Channel](https://developer.mozilla.org/en-US/docs/Web/API/MessageChannel)
+and its job is to pass the data back to the Flutter App, using the integrated WebView 
+(which we'll set up in the next step).
+
+In this case, we'll assume that the URL pointing to this page is `myapp.kgiannakis.me/captcha-challenge`.
 
 ## Installation:
 
@@ -59,3 +70,55 @@ dependencies:
   hcaptcha_flutter:
     path: ../hcaptcha_flutter
 ```
+
+3. Create a `HCaptchaProvider`:
+
+```dart
+HCaptchaProvider(
+  captchaUrl: "https://myapp.kgiannakis.me/captcha-challenge",
+  onPreCaptcha: const SomeForm(),
+  onCaptcha: const CaptchaScreen(),
+  onCaptchaCompleted: (result, cbloc, data) {
+    // This is the part where you pass the result to the server for verification
+    final username = data.getData(key: "username");
+    log(result);
+    log(username);
+  })
+```
+
+This provides the scaffolding work of the captcha process. It injects a `CaptchaBloc` to the widget
+tree along with a `CaptchaDataContainer`. Think of the data container as a method to temporarily store
+stuff when dealing with a captcha challenge.
+
+4. Inside your form, add the Captcha Logic when submitting:
+
+```dart
+if (_formKey.currentState!.validate()) {
+  // Add the username to the data container.
+  var dataContainer = CaptchaUtils.getDataContainer(context);
+  dataContainer.addData(
+      key: "username", dataIn: _usernameController.value.text);
+
+  // This advances the user to the second step (the challenge)
+  CaptchaUtils.goToCaptcha(context);
+}
+```
+
+5. Finally, add the `HCaptcha` widget itself:
+
+```dart
+class CaptchaScreen extends StatelessWidget {
+  const CaptchaScreen({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 450),
+      child: HCaptcha(),
+    );
+  }
+}
+```
+
+6. When the challenge has been completed by the user, the callback in step 3 (`onCaptchaCompleted`) 
+will be called. You can then pass on the result to your backend for [verification](https://docs.hcaptcha.com/#verify-the-user-response-server-side).
